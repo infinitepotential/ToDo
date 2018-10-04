@@ -11,7 +11,7 @@ import UIKit
 class ToDoListViewController: UITableViewController, UITextFieldDelegate {
 
     
-    let itemArray = ["Buy Eggs", "Buy Avocado", "Read Books"]
+    var itemArray = ["Buy Eggs", "Buy Avocado", "Read Books"]
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -67,11 +67,39 @@ class ToDoListViewController: UITableViewController, UITextFieldDelegate {
         
         
          tableView.deselectRow(at: indexPath, animated: true) // so that when we select the item, it will go grey, and then turn back to normal after the selection
-    
-      
-    
     }
     
+    // MARK - Add New Items
+    
+    @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
+        // would like to see a pop up or an UI Alert Controller to show when I press the add button, a text field in that UI Alert so that I can  Write a quick to do list item and Append it into my Item Array
+        
+        var textField = UITextField() // This text field has the entire scope of the addButtonPressed method.
+        
+        let alert = UIAlertController(title: "Add New To Do List", message: "", preferredStyle: .alert)
+        
+        let action = UIAlertAction(title: "Add Item", style: .default) { (Action) in
+             // What will happen once the user clincks the add Button on our UIAlert
+            print(textField.text!)
+            self.itemArray.append(textField.text!) // It is safe to use !The textField.text is always not going to be nil. worst is empty ""
+            
+            self.tableView.reloadData() // have to refresh data to get the data showed up
+        }
+        
+        
+        alert.addTextField { (alertTextField) in // we are going to call the textfield created called alertTextField
+            alertTextField.placeholder = "Create New Item"
+            //This is the string that is going to be showed in Grey and disppear when the User click on the text field
+        
+            textField = alertTextField
+            
+        }
+        
+        
+        alert.addAction(action)
+        
+        present(alert, animated: true, completion: nil)
+    }
     
 }
 
