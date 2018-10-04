@@ -10,13 +10,15 @@ import UIKit
 
 class ToDoListViewController: UITableViewController, UITextFieldDelegate {
 
-    
     var itemArray = ["Buy Eggs", "Buy Avocado", "Read Books"]
     
+    let defaults = UserDefaults.standard // this is an interface to user's default database where you store your key value pairs persistently across launch your app.
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
-        
+        if let item = defaults.array(forKey: "TodoListArray") as? [String] {
+            itemArray = item
+        }
        
         
     }
@@ -80,8 +82,12 @@ class ToDoListViewController: UITableViewController, UITextFieldDelegate {
         
         let action = UIAlertAction(title: "Add Item", style: .default) { (Action) in
              // What will happen once the user clincks the add Button on our UIAlert
+            
             print(textField.text!)
+            
             self.itemArray.append(textField.text!) // It is safe to use !The textField.text is always not going to be nil. worst is empty ""
+            
+            self.defaults.set(self.itemArray, forKey: "TodoListArray")// you need to have the key to retrieve the value, the value added can be any data type, Array, dictionary or String etc.  And this got saved in a P-list file
             
             self.tableView.reloadData() // have to refresh data to get the data showed up
         }
