@@ -18,7 +18,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         
         // This got called when you loaded up, this happens before the viewDidLoad inside the ViewController
         // Override point for customization after application launch.
-        print("didFinishLaunchingWithOptions")
+        // print("didFinishLaunchingWithOptions")
         print(NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).last! as String) // This is to show where the path where our data is stored
         
         return true

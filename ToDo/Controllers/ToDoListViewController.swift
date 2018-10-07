@@ -11,29 +11,46 @@ import UIKit
 class ToDoListViewController: UITableViewController, UITextFieldDelegate {
 
     var itemArray = [Items]() // instead of hard coding the array, make the array consist of Item object
+    //Option 1 to store the todoList data
+    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist") // add a path compotent
     
-    let defaults = UserDefaults.standard // this is an interface to user's default database where you store your key value pairs persistently across launch your app.
+    // FileManager is an objet that provides an interfact to the file system. defaul is the shared object (singleton), we are looking for documents directory inside the userDomainMask - user's home directory, any personal items saved in this current app
+    // This need to be a global constant to be accessible to all methods within the class
+    
+
+
+
+    
+//option 2 to save data in userDefault
+//    let defaults = UserDefaults.standard // this is an interface to user's default database where you store your key value pairs persistently across launch your app. This cause app crash because the data cannot be retrieve by Swift, you are not mean to save the data structure file there.
+    
+    
+    
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        let newItem = Items() // newItem is an object of class Items
-        newItem.title = "Buy Eggs"
-        itemArray.append(newItem)
+            print(dataFilePath)
         
-        let newItem2 = Items()
-        newItem2.title = "Buy Avocada"
-        itemArray.append(newItem2)
+//        let newItem = Items() // newItem is an object of class Items
+//        newItem.title = "Buy Eggs"
+//        itemArray.append(newItem)
+//
+//        let newItem2 = Items()
+//        newItem2.title = "Buy Avocada"
+//        itemArray.append(newItem2)
+//
+//        let newItem3 = Items()
+//        newItem3.title = "Go YumCha"
+//        itemArray.append(newItem3)
+//  Since we have already saved these items into our p-list, we can delete these for now.
         
-        let newItem3 = Items()
-        newItem3.title = "Go YumCha"
-        itemArray.append(newItem3)
-        
-        
+        loadItems()
         
 //         Do any additional setup after loading the view, typically from a nib.
-        if let item = defaults.array(forKey: "TodoListArray") as? [Items] {
-            itemArray = item
-        }
+//        if let item = defaults.array(forKey: "TodoListArray") as? [Items] {
+//            itemArray = item
+//        }
        
         
     }
@@ -97,6 +114,7 @@ class ToDoListViewController: UITableViewController, UITextFieldDelegate {
     // so the cell in this indexPath is going to have an accessory type of checkmark when selected. (checkmark is not delected yet)
        
         //option 1 more succinct, this set the done property of the existing array to the opposite
+        
         itemArray[indexPath.row].done = !itemArray[indexPath.row].done
      
          // Option 2
@@ -105,8 +123,9 @@ class ToDoListViewController: UITableViewController, UITextFieldDelegate {
 //        } else {
 //            itemArray[indexPath.row].done = false
 //        }
+        self.saveItems()
         
-        tableView.reloadData() // this will reflect the change when we select/deselect the item. This force the table view to call its data source methods again, so will reload the data
+        
         
 //        if tableView.cellForRow(at: indexPath)?.accessoryType == .checkmark {
 //            tableView.cellForRow(at: indexPath)?.accessoryType = .none
@@ -139,10 +158,8 @@ class ToDoListViewController: UITableViewController, UITextFieldDelegate {
             
             self.itemArray.append(newItem)
 //            self.itemArray.append(textField.text!) // It is safe to use !The textField.text is always not going to be nil. worst is empty ""
-//
-            self.defaults.set(self.itemArray, forKey: "TodoListArray")// you need to have the key to retrieve the value, the value added can be any data type, Array, dictionary or String etc.  And this got saved in a P-list file
             
-            self.tableView.reloadData() // have to refresh data to get the data showed up
+            self.saveItems()
         }
         
         
@@ -160,5 +177,40 @@ class ToDoListViewController: UITableViewController, UITextFieldDelegate {
         present(alert, animated: true, completion: nil)
     }
     
+    //MARK - Model Manipulation Method
+    
+    func saveItems() {
+        //Option 1
+        let encoder = PropertyListEncoder()
+        do {
+            let data = try encoder.encode(itemArray) // This will encode our item list into a p-list, value we are going to encode is our itemArray. (if it is in a closure, mark all property with a self) not in this case.
+            
+            try data.write(to:dataFilePath!) // after encoding the data, write the data to the p-list
+        }
+        catch {
+            print("Error encoding item array, \(error)")
+        }
+        
+        // Option obselete: self.defaults.set(self.itemArray, forKey: "TodoListArray")// you need to have the key to retrieve the value, the value added can be any data type, Array, dictionary or String etc.  And this got saved in a P-list file. This will not work when I change to use the data struture in the model
+        
+        
+        
+        self.tableView.reloadData() //  this will reflect the change when we select/deselect the item. This force the table view to call its data source methods again, so will reload the data
+    }
+    
+    func loadItems () {
+         // because the method will throw error, so we use try? which will turn this method into an optional. We also use an optional binding to make it unwrap safely.
+        if let data = try? Data(contentsOf: dataFilePath!) {
+            let decoder = PropertyListDecoder ()
+            do {
+            itemArray = try decoder.decode([Items].self, from: data)
+            }
+            catch {
+                print("There is error: \(error)")
+            }
+        } // we are not specifying the the object Items() becasue we are refering to the dataType
+       
+    
 }
 
+}
