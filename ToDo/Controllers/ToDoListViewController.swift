@@ -10,7 +10,7 @@ import UIKit
 import RealmSwift
 //import CoreData
 
-class ToDoListViewController: UITableViewController, UITextFieldDelegate {
+class ToDoListViewController: SwipeTableViewController, UITextFieldDelegate {
     
     //Option 3: CoreData
 //    var itemArray = [Item]() // instead of hard coding the array, make the array consist of Item object
@@ -49,7 +49,7 @@ class ToDoListViewController: UITableViewController, UITextFieldDelegate {
    
     override func viewDidLoad() {
         super.viewDidLoad()
-        
+       
         //Option 1: user default method
         //         Do any additional setup after loading the view, typically from a nib.
         //        if let item = defaults.array(forKey: "TodoListArray") as? [Items] { // cast this as array of String
@@ -91,7 +91,9 @@ class ToDoListViewController: UITableViewController, UITextFieldDelegate {
         
         //let cell = UITableViewCell(style: .default, reuseIdentifier: "ToDoItemCell"), If we use this method, each time the cell off the screen, it will get relocated to other cell, the checkmark we ticked will be gone.
         
-        let cell = tableView.dequeueReusableCell(withIdentifier:  "ToDoItemCell", for: indexPath) // The identifier is the identifier we gave to our prototype cell. However, by using this property, if the checked cell off the screen, and we keep scrolling down, the cell got re-located to another cell, it got checked as well even without us checking it. so to solve this issue we can create a model. indexPath is the position of the cell in the table. 
+        let cell = super.tableView(tableView, cellForRowAt: indexPath) // Tap into the super Class Swipable cell
+
+        //        let cell = tableView.dequeueReusableCell(withIdentifier:  "Cell", for: indexPath) // The identifier is the identifier we gave to our prototype cell. However, by using this property, if the checked cell off the screen, and we keep scrolling down, the cell got re-located to another cell, it got checked as well even without us checking it. so to solve this issue we can create a model. indexPath is the position of the cell in the table.
         
 //        cell.textLabel?.text = itemArray[indexPath.row] // this need to be replaced because this is going to return an item object, we actuall  need to tap into the class title property.
 
@@ -104,8 +106,8 @@ class ToDoListViewController: UITableViewController, UITextFieldDelegate {
              cell.textLabel?.text = item.title
             cell.accessoryType = item.done ? .checkmark : .none
         } else {
-             cell.textLabel?.text = "No Added Item in this Category"
-            cell.accessoryType = .none
+             cell.textLabel?.text = "No Added Item"
+//            cell.accessoryType = .none // no need because the default is none. 
         }
         
         //option 1 to save data in userDefault
@@ -192,7 +194,26 @@ class ToDoListViewController: UITableViewController, UITextFieldDelegate {
          tableView.deselectRow(at: indexPath, animated: true) // so that when we select the item, it will go grey, and then turn back to normal after the selection
     }
     
-    // MARK - Add New Items
+    //MARK: - Delete Data from Swipe
+    
+    override func updateModel(at indexPath: IndexPath) {
+        if let itemForDelection = items?[indexPath.row] {
+        do {
+            try realm.write {
+                realm.delete(itemForDelection)
+            }
+            
+        } catch {
+            print ("Error deleting item from Realm:\(error)")
+            }
+        }
+    }
+    
+    
+    
+    
+    
+    //MARK: - Add New Items
     
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
         // would like to see a pop up or an UI Alert Controller to show when I press the add button, a text field in that UI Alert so that I can  Write a quick to do list item and Append it into my Item Array

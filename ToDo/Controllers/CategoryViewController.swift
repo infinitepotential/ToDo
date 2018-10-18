@@ -9,8 +9,9 @@
 import UIKit
 import RealmSwift
 //import CoreData
+//import SwipeCellKit
 
-class CategoryViewController: UITableViewController, UITextFieldDelegate {
+class CategoryViewController: SwipeTableViewController, UITextFieldDelegate {
     
     //Option 3 CoreData
     //     var categoryArray = [Category]()
@@ -24,7 +25,6 @@ class CategoryViewController: UITableViewController, UITextFieldDelegate {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-
      loadCategory()
    
     }
@@ -43,20 +43,37 @@ class CategoryViewController: UITableViewController, UITextFieldDelegate {
        
     }
     
+    //    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+    //        let cell = tableView.dequeueReusableCell(withIdentifier: "Cell") as! SwipeTableViewCell
+    //        cell.delegate = self
+    //        return cell
+    //    }
+    //
   
     
      //TODO: Declare cellForRowAtIndexPath here:
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier:  "CategoryCell", for: indexPath)
+        //Step 5: Not swipable
+//          let cell = tableView.dequeueReusableCell(withIdentifier:  "CategoryCell", for: indexPath)
+        
+         // Step 6: SwipeCell in Category Controller
+//        let cell = tableView.dequeueReusableCell(withIdentifier:  "CategoryCell", for: indexPath) as! SwipeTableViewCell
+        
+//        cell.delegate = self 
+        
+        //Step 7: Separate SwipeCell Controller
+        let cell = super.tableView(tableView, cellForRowAt: indexPath) // this will tap into the cell inside the super view, at our current index path
+        
+        
         //Option 3: CoreData
-//        let category = categoryArray[indexPath.row]
+        // let category = categoryArray[indexPath.row]
         
         //Option4: Realm
         cell.textLabel?.text = categories?[indexPath.row].name ?? "No Category added yet"
         
         //shorten the codes by  cell.textLabel?.text = categoryArray[indexPath.row].name
         
-        print("Declare cellForRowAtIndexPath is successful")
+//        print("Declare cellForRowAtIndexPath is successful") // testing codes only
         
         return cell
     
@@ -81,6 +98,24 @@ class CategoryViewController: UITableViewController, UITextFieldDelegate {
         }
         
     }
+    
+    //MARK: - Delete Data from Swipe
+    
+    override func updateModel(at indexPath: IndexPath) {
+        if let categoryForDelection = self.categories?[indexPath.row] {
+            do {
+                try self.realm.write {
+                    self.realm.delete(categoryForDelection)
+                }
+            }
+            catch {
+                print("Error deleting Category:\(error)")
+            }
+//                         tableView.reloadData() // Angela's explanation is not clear, because swipe will try to delete the last row in the app, that is why we need to delete this line. It will cause error if I let it stay. 
+                    }
+    }
+    
+    
     
      //MARK: - Add New Categories
     
@@ -124,7 +159,6 @@ class CategoryViewController: UITableViewController, UITextFieldDelegate {
         }
         
        
-
         alert.addTextField{ (alertTextField) in
 
             alertTextField.placeholder = "Create New Category"
@@ -159,10 +193,9 @@ class CategoryViewController: UITableViewController, UITextFieldDelegate {
         }
         self.tableView.reloadData()
     }
+    
+    
     func loadCategory(){
-      
-        
-   
     // Option 3 CoreData
     
 // let request: NSFetchRequest<Category> = Category.fetchRequest()
@@ -179,10 +212,4 @@ class CategoryViewController: UITableViewController, UITextFieldDelegate {
  tableView.reloadData()
     }
 
-   
-
-    
-   
-    
-    
 }
