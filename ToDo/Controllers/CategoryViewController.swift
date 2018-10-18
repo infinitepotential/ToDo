@@ -7,12 +7,20 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
+//import CoreData
 
 class CategoryViewController: UITableViewController, UITextFieldDelegate {
-     var categoryArray = [Category]()
-     let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    
+    //Option 3 CoreData
+    //     var categoryArray = [Category]()
+    //     let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
 
+    //Option 4: Realm
+    let realm = try! Realm()
+    var categories: Results<Category>? // Results is a realm dataType as result of the queries, this contain result of all the Category objects
+
+   
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -25,8 +33,13 @@ class CategoryViewController: UITableViewController, UITextFieldDelegate {
     
      //TODO: Declare numberOfRowsInSection here:
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-       
-        return categoryArray.count
+
+        
+        //Option 3 CoreData
+//        return categoryArray.count
+        
+        //Option4: Realm
+        return categories?.count ?? 1 // This is call Nil Coalescing Operator: the front part could be nil, then return the later value 1
        
     }
     
@@ -35,10 +48,11 @@ class CategoryViewController: UITableViewController, UITextFieldDelegate {
      //TODO: Declare cellForRowAtIndexPath here:
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier:  "CategoryCell", for: indexPath)
+        //Option 3: CoreData
+//        let category = categoryArray[indexPath.row]
         
-        let category = categoryArray[indexPath.row]
-        
-        cell.textLabel?.text = category.name
+        //Option4: Realm
+        cell.textLabel?.text = categories?[indexPath.row].name ?? "No Category added yet"
         
         //shorten the codes by  cell.textLabel?.text = categoryArray[indexPath.row].name
         
@@ -59,7 +73,11 @@ class CategoryViewController: UITableViewController, UITextFieldDelegate {
         
         // the current row that is seleted
         if let indextPath = tableView.indexPathForSelectedRow {
-            destinationVC.selectedCategory = categoryArray[indextPath.row]
+            //Option3: CoreData
+//            destinationVC.selectedCategory = categoryArray[indextPath.row]
+            
+            //Option4: Realm
+             destinationVC.selectedCategory = categories?[indextPath.row] // it can be an optional / Nil value for .selectedCategory
         }
         
     }
@@ -81,14 +99,28 @@ class CategoryViewController: UITableViewController, UITextFieldDelegate {
             
         
             print (textField.text!)
-
-            let newCategory = Category(context: self.context )
+            
+        //Option 3 CoreData
+        //            let newCategory = Category(context: self.context )
+            
+            //Option 4: Realm
+            
+            let newCategory = Category()
 
             newCategory.name = textField.text!
-
-            self.categoryArray.append(newCategory)
-
-            self.saveCategory()
+            
+            //Option 1-3 Userdefaul - Plist - CoreData
+            //   self.categoryArray.append(newCategory)
+            //            self.saveCategory()
+            
+            
+            //Option 4: Realm: We don't need to append the newCategory any more becasue categories is Result type which is auto-updated.
+           
+            
+            
+            //Option 4: Realm
+            self.save(category: newCategory)
+            
         }
         
        
@@ -109,31 +141,44 @@ class CategoryViewController: UITableViewController, UITextFieldDelegate {
     
     
       //MARK: - Data Manipulation Method
+    //Option 1-3: Userdefault-Plist-Coredata
+//    func saveCategory () {
     
-    func saveCategory () {
-        
+    //Option 4: Realm
+        func save(category : Category) {
+
         do {
-            try context.save()
+            //Option 3: CoreData
+            //            try context.save()
+            try realm.write {
+                realm.add(category)
+            }
         }
         catch {
             print("error saving category \(error)")
         }
         self.tableView.reloadData()
     }
-    
-    func loadCategory(with request: NSFetchRequest<Category> = Category.fetchRequest()) {
+    func loadCategory(){
+      
         
-        do {
-             categoryArray = try context.fetch(request)
-             self.tableView.reloadData()
-             print(categoryArray)
-        }
-        catch {
-            print("Error Loading Category from context: \(error)")
-        }
-       
-    }
+   
+    // Option 3 CoreData
     
+// let request: NSFetchRequest<Category> = Category.fetchRequest()
+//
+//        do {
+//             categoryArray = try context.fetch(request)
+//        }
+//        catch {
+//            print("Error Loading Category from context: \(error)")
+//        }
+        
+        //Option 4 Realm
+        categories = realm.objects(Category.self) // This will pull out all the items inside our realm they are of Category Objects
+ tableView.reloadData()
+    }
+
    
 
     

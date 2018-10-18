@@ -7,18 +7,21 @@
 //
 
 import UIKit
-import CoreData
-
+import RealmSwift
+//import CoreData
 
 class ToDoListViewController: UITableViewController, UITextFieldDelegate {
     
     //Option 3: CoreData
-    var itemArray = [Items]() // instead of hard coding the array, make the array consist of Item object
+//    var itemArray = [Item]() // instead of hard coding the array, make the array consist of Item object
+
+    //Option 4: Realm
+    let realm = try! Realm() //????? Create a new instance of Realm
+    var items : Results<Item>?
     
     var selectedCategory : Category? {
         didSet{ // the keyword will trigger the codes to run as soon as the seletedCategory value is set. which is when the category is chosen in the CategoryViewController
             loadItem()
-            print("selected Category :\(selectedCategory!)")
         }
     }// it is going to be nil until we set it using the segue
     
@@ -27,7 +30,7 @@ class ToDoListViewController: UITableViewController, UITextFieldDelegate {
     
     //Option 2 saving data to our own customise P-list.  This is the directory where the p-list is saved.
     
-    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Item.plist") // add a path component
+//    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Item.plist") // add a path component
     
     // FileManager is an object that provides an interfact to the file system. default is the shared object (singleton), we are looking for documents directory inside the userDomainMask - user's home directory, any personal items saved in this current app
     
@@ -37,7 +40,8 @@ class ToDoListViewController: UITableViewController, UITextFieldDelegate {
     
     //Option 3: CoreData
     // We cannot just do this to access to the context area:let context = AppDelegate.persistantContainer.viewContext, becaseu AppDelegate is a class, we need to access to the object of that class.
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    
+//    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     
     //UIApplication.shared is a singleton app instance, when our app is running live on user's Iphone, shared UIApplication will correspond to our live application object. delegate ppt is the delegate of this app object. Option + ? ->  see it is an Optional UIApplicationDelegate. We downcast it as AppDelegate.They both inherit from the same class -> UI Application Delegate, the downcast is valid.
     //we now have access to our AppDelegate object, and tap into its ppt persistentContainer.viewContext
@@ -52,8 +56,8 @@ class ToDoListViewController: UITableViewController, UITextFieldDelegate {
         //            itemArray = item
         //        }
         
-        
-            print(dataFilePath)
+        //Option 1-3:
+//            print(dataFilePath)
         
 //        let newItem = Items() // newItem is an object of class Items
 //        newItem.title = "Buy Eggs"
@@ -75,7 +79,7 @@ class ToDoListViewController: UITableViewController, UITextFieldDelegate {
     
     //TODO: Declare numberOfRowsInSection here:
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return itemArray.count
+        return items?.count ?? 1
     }
   
     
@@ -90,9 +94,20 @@ class ToDoListViewController: UITableViewController, UITextFieldDelegate {
         let cell = tableView.dequeueReusableCell(withIdentifier:  "ToDoItemCell", for: indexPath) // The identifier is the identifier we gave to our prototype cell. However, by using this property, if the checked cell off the screen, and we keep scrolling down, the cell got re-located to another cell, it got checked as well even without us checking it. so to solve this issue we can create a model. indexPath is the position of the cell in the table. 
         
 //        cell.textLabel?.text = itemArray[indexPath.row] // this need to be replaced because this is going to return an item object, we actuall  need to tap into the class title property.
+
+        //Option 1-3 userDefault- customise Plist-CoreData
+//         let item =  itemArray[indexPath.row]
+    
+        //Option 4 Realm
         
-         let item =  itemArray[indexPath.row]
-       
+        if let item = items?[indexPath.row] {
+             cell.textLabel?.text = item.title
+            cell.accessoryType = item.done ? .checkmark : .none
+        } else {
+             cell.textLabel?.text = "No Added Item in this Category"
+            cell.accessoryType = .none
+        }
+        
         //option 1 to save data in userDefault
         //   if item.done == true {
         //            cell.accessoryType = .checkmark
@@ -106,9 +121,9 @@ class ToDoListViewController: UITableViewController, UITextFieldDelegate {
         
         // option 3 Core Data
         
-        cell.textLabel?.text = item.title
-        cell.accessoryType = item.done ? .checkmark : .none
-       
+//        cell.textLabel?.text = item.title
+//        cell.accessoryType = item.done ? .checkmark : .none
+//
         
         return cell
         
@@ -141,7 +156,7 @@ class ToDoListViewController: UITableViewController, UITextFieldDelegate {
          //Option 2: our own P-list method
         // more succinct, this set the done property of the existing array to the opposite. tick marked for completion
         
-        itemArray[indexPath.row].done = !itemArray[indexPath.row].done
+//        itemArray[indexPath.row].done = !itemArray[indexPath.row].done
         // You can also itemArrray[indexPath.row].setValue("completed", forKey: "title"): change the title to completed for every completed task
         
         
@@ -149,10 +164,22 @@ class ToDoListViewController: UITableViewController, UITextFieldDelegate {
 //         context.delete(itemArray[indexPath.row]) // This is to remove the item from our coredata, the oreder is important
 //
 //        itemArray.remove(at: indexPath.row) // This is only removing the item from current itemArray, the tableView DataSource
-       
-        self.saveItem()
+
+        // Option 4 Realm
+        if let itemCheck = items?[indexPath.row] {
+            do {
+            try realm.write {
+                itemCheck.done = !itemCheck.done
+            }
+            } catch {
+                print("Error Updating item check status : \(error)")
+            }
+        }
         
         
+        tableView.reloadData()
+        
+    
         
 //        if tableView.cellForRow(at: indexPath)?.accessoryType == .checkmark {
 //            tableView.cellForRow(at: indexPath)?.accessoryType = .none
@@ -179,21 +206,42 @@ class ToDoListViewController: UITableViewController, UITextFieldDelegate {
             
             print(textField.text!)
             
-          
-            let newItem = Items(context: self.context) // when we Initialise the Items(), we can specify the context where this item is going to exist. Use self. because it is inside a closure
+          //Option 3 CoreData
+//            let newItem = Item(context: self.context) // when we Initialise the Items(), we can specify the context where this item is going to exist. Use self. because it is inside a closure
             
             // the 2nd context refer to the constant context declared above
          
-            newItem.title = textField.text!
-            
-            newItem.done = false
-            
-            newItem.parentCategory = self.selectedCategory // because we have already link database relationship, so the - parentCategory is also available as extention for newItem. Value for seleted category is set in CategoryViewController.
-            
-            self.itemArray.append(newItem)
+//            newItem.title = textField.text!
+//
+//            newItem.done = false
+//
+//            newItem.parentCategory = self.selectedCategory // because we have already link database relationship, so the - parentCategory is also available as extention for newItem. Value for seleted category is set in CategoryViewController.
+//
+//            self.itemArray.append(newItem)
 //            self.itemArray.append(textField.text!) // It is safe to use !The textField.text is always not going to be nil. worst is empty ""
             
-            self.saveItem()
+            
+            //Option 4 Realm
+            // selectedCategory is an optional dataType, need to unwrap it.
+            
+            if let currentCategory = self.selectedCategory {
+                  do {
+                try self.realm.write {
+                    
+                    let newItem = Item()
+                    newItem.title = textField.text!
+                    newItem.dateCreated = Date()
+                    currentCategory.items.append(newItem)
+                    }
+                  } catch {
+                        print("Error saving item to realm: \(error)")
+                }
+                
+            }
+                // instead of setting the newItem's parentCategory, we are going to tap into the Item belong to the current category, and append the newItem to that list
+                
+        
+            self.tableView.reloadData()
         }
         
         // This method will show the User the empty input text field
@@ -212,8 +260,8 @@ class ToDoListViewController: UITableViewController, UITextFieldDelegate {
     }
     
     //MARK - Model Manipulation Method
-    
-    func saveItem() {
+     //Option 1 - 3
+//    func saveItem() {
         //Option 1
 //        let encoder = PropertyListEncoder()
 //        do {
@@ -229,77 +277,86 @@ class ToDoListViewController: UITableViewController, UITextFieldDelegate {
 
         //Option 3 Persistent Storage CoreData
         //Commit our context to the permanent storage inside lazy var the persistencContainer in AppDelegate. transfer the data from our staging area to our permanent storage
-        do {
-            try context.save() //look at the context temporary area
-        }
-        catch {
-            print("Error saving context: \(error)")
-        }
-        
-        
-        self.tableView.reloadData() //  this will reflect the change when we select/deselect the item. This force the table view to call its data source methods again, so will reload the data
-    }
-    
-
-    // refactor the codes, so it will take in parameter with - external, requeste - internal parameter, dataType is NSFetchRequest, and return an array of items. Items.fetchRequest() is the default request if nothing has been enter. 
-    func loadItem (with request: NSFetchRequest<Items> = Items.fetchRequest(), predicate : NSPredicate? = nil) { // we can set the default value of the predicate nil, then we can call loadItems () without parameters because both parameters have default value fetch all items： Items.fetchRequest() in parentCategory.  since NSPredicate can be nil, set it as an optional - ?. We can treat predicate as an action 
-        
-        let categoryPredicate = NSPredicate(format: "parentCategory.name MATCHES %@", selectedCategory!.name!) // predicate is filter, selecte items only match the criteria.
-    
-        if let additionalPredicate = predicate {//predicate can be nil, so use if let Optional binding. if predicate is not nil, then use both filters as request predicate, or else use only the categoryPredicate as filter
-             request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate, additionalPredicate])
-        } else {
-            request.predicate = categoryPredicate
-        }
-        
-        
-//        let compoundPredicate = NSCompoundPredicate (andPredicateWithSubpredicates: [categoryPredicate, predicate])
-//        request.predicate = compoundPredicate
-        
-        
-//  Option 1 &2   // because the method will throw error, so we use try? which will turn this method into an optional. We also use an optional binding to make it unwrap safely.
-//        if let data = try? Data(contentsOf: dataFilePath!) {
-//            let decoder = PropertyListDecoder ()
-//            do {
-//            itemArray = try decoder.decode([Item].self, from: data)
-//            }
-//            catch {
-//                print("There is error: \(error)")
-//            }
-//        } // we are not specifying the the object Items() becasue we are refering to the dataType
+//        do {
+//            try context.save() //look at the context temporary area
+//        }
+//        catch {
+//            print("Error saving context: \(error)")
+//        }
 //
+   
+
+    // refactor the codes, so it will take in parameter with - external, requeste - internal parameter, dataType is NSFetchRequest, and return an array of items. Items.fetchRequest() is the default request if nothing has been enter.
+    
+//    func loadItem (with request: NSFetchRequest<Items> = Items.fetchRequest(), predicate : NSPredicate? = nil) { // we can set the default value of the predicate nil, then we can call loadItems () without parameters because both parameters have default value fetch all items： Items.fetchRequest() in parentCategory.  since NSPredicate can be nil, set it as an optional - ?. We can treat predicate as an action
+//
+//        let categoryPredicate = NSPredicate(format: "parentCategory.name MATCHES %@", selectedCategory!.name!) // predicate is filter, selecte items only match the criteria.
+//
+//        if let additionalPredicate = predicate {//predicate can be nil, so use if let Optional binding. if predicate is not nil, then use both filters as request predicate, or else use only the categoryPredicate as filter
+//             request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate, additionalPredicate])
+//        } else {
+//            request.predicate = categoryPredicate
+//        }
+//
+//
+////        let compoundPredicate = NSCompoundPredicate (andPredicateWithSubpredicates: [categoryPredicate, predicate])
+////        request.predicate = compoundPredicate
+//
+//
+////  Option 1 &2   // because the method will throw error, so we use try? which will turn this method into an optional. We also use an optional binding to make it unwrap safely.
+////        if let data = try? Data(contentsOf: dataFilePath!) {
+////            let decoder = PropertyListDecoder ()
+////            do {
+////            itemArray = try decoder.decode([Item].self, from: data)
+////            }
+////            catch {
+////                print("There is error: \(error)")
+////            }
+////        } // we are not specifying the the object Items() becasue we are refering to the dataType
+////
+//
+////Option 3 CoreData
+////        let request : NSFetchRequest<Items> = Items.fetchRequest() // because we pass the request as the parameter, we don't need to use this
+//        //You have to specify the dataType <Items> and the entity - Items you request
+//        do {
+//        itemArray = try context.fetch(request)
+//            // the result is going to be an array of items that stored in our persistent container
+//        }
+//        catch {
+//        print ("Error fetching data from context \(error)")
+//        }
+//        tableView.reloadData()
+//    }
+    
+    func loadItem (){
+        items = selectedCategory?.items.sorted(byKeyPath:"title", ascending: true )
         
-//Option 3 CoreData
-//        let request : NSFetchRequest<Items> = Items.fetchRequest() // because we pass the request as the parameter, we don't need to use this
-        //You have to specify the dataType <Items> and the entity - Items you request
-        do {
-        itemArray = try context.fetch(request)
-            // the result is going to be an array of items that stored in our persistent container
-        }
-        catch {
-        print ("Error fetching data from context \(error)")
-        }
         tableView.reloadData()
     }
+    
+    
+
+    
+
 }
 
 //MARK: - Search Bar Method
 // Instad of putting the delegate in the class, we can do it as extension, so easy for code management and debugs.
 extension ToDoListViewController: UISearchBarDelegate {
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
-        let request : NSFetchRequest<Items> = Items.fetchRequest()
-        let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
-        
+        //Option 3 CoreData
+//        let request : NSFetchRequest<Items> = Items.fetchRequest()
+//        let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
+
 //       request.predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!) // initialise the predicate using a format, we are going to look at the title attribute of the itemArray, we are going to check that it contains a value in the search bar. The contents of the search bar is going to substitute the %@. [cd] means not case or diacritic sensitive
-        
+
         // This a predicate class : how data is filtered and fectched
-        
-   
-        
-         request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
+
+//Option 3 CoreData
+//         request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
 // it expect an array of sortDescriptors, just contain 1 is also OK.
 
-        
+
 // shrink the code by refactor the loadItem()
 //        do {
 //            itemArray = try context.fetch(request)
@@ -308,11 +365,21 @@ extension ToDoListViewController: UISearchBarDelegate {
 //        catch {
 //            print ("Error fetching data from context \(error)")
 //        }
-        
-        loadItem(with: request, predicate: predicate)
+
+        //Option 3 CoreData
+//        loadItem(with: request, predicate: predicate)
+        // when the user click the search item, this will trigger the function and get the tableView reloaded
     //  print(searchBar.text!)
-    }// when the user click the search item, this will trigger the function and get the tableView reloaded
-    
+        
+        //Option 4: Realm
+        items = items?.filter("title CONTAINS[cd] %@", searchBar.text!).sorted(byKeyPath: "dateCreated", ascending: true)
+        
+        //we don't need to reload the items, because we have alread reloaded the items from the seletec category in func load()
+        
+        tableView.reloadData()
+        
+    }
+
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         //everytime I type something diff in the searchBar is going to trigger this method, from text -> No text, this was going to be triggered
         if searchBar.text?.count == 0 {
@@ -324,6 +391,6 @@ extension ToDoListViewController: UISearchBarDelegate {
             }
         }
     }
-    
-    
+
+
 }
